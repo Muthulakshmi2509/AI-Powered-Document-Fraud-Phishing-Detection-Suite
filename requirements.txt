@@ -3,10 +3,15 @@ uvicorn
 streamlit
 easyocr
 pillow
-opencv-python
+opencv-python-headless
 imagehash
 scikit-learn
 pandas
 numpy
 python-multipart
 sqlalchemy
+pyotp
+pymupdf
+python-docx
+qrcode
+spacy
