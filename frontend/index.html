@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+    <style>
+        .loader {
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-6 h-screen flex flex-col font-sans">
+    
+    <div class="max-w-6xl mx-auto w-full flex-grow flex flex-col space-y-6">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-[var(--border)] pb-4">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight text-[var(--primary)]">Intelligent Doc Verifier</h1>
+                <p class="text-[var(--muted-foreground)] mt-1">Deep Forensic ELA & NLP Analysis Platform</p>
+            </div>
+            <div class="bg-[var(--card)] border border-[var(--border)] px-4 py-2 rounded-lg text-sm font-semibold shadow-sm">
+                Live Status: <span class="text-green-500 ml-1">● Online (localhost:8000)</span>
+            </div>
+        </div>
+
+        <!-- Uploader Box -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4">Upload Document</h2>
+            <div class="flex items-center space-x-4">
+                <input type="file" id="fileInput" class="block w-full text-sm text-[var(--foreground)]
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-[var(--primary)] file:text-[var(--primary-foreground)]
+                    hover:file:opacity-90 cursor-pointer border border-[var(--border)] rounded-md p-2 bg-[var(--background)]">
+                
+                <button id="verifyBtn" class="bg-[var(--primary)] text-[var(--primary-foreground)] font-bold py-2 px-6 rounded-md hover:opacity-90 transition-opacity whitespace-nowrap shadow-sm">
+                    Analyze Document
+                </button>
+            </div>
+            <div id="loading" class="hidden mt-6 flex items-center space-x-3">
+                <div class="loader"></div>
+                <span class="text-[var(--muted-foreground)] font-medium">Running Deep Forensic ML Algorithms...</span>
+            </div>
+        </div>
+
+        <!-- Results Section (Hidden by default) -->
+        <div id="results" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
+            
+            <!-- Left Column: Data & Forensics -->
+            <div class="space-y-6 flex flex-col">
+                
+                <!-- Verdict Box -->
+                <div id="verdictBox" class="rounded-xl p-6 border shadow-sm">
+                    <h2 class="text-sm uppercase font-bold tracking-wider opacity-80 mb-1">Final Verdict</h2>
+                    <div class="text-4xl font-extrabold mb-2" id="verdictText">HIGH RISK</div>
+                    <div class="text-lg opacity-90">Risk Score: <span id="scoreText" class="font-bold"></span></div>
+                </div>
+
+                <!-- Extracted Data -->
+                <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm flex-grow">
+                    <h3 class="text-lg font-semibold mb-4 border-b border-[var(--border)] pb-2">Structured Data Extraction</h3>
+                    <div class="space-y-3 text-sm">
+                        <div><span class="font-bold text-[var(--muted-foreground)]">Dates Found:</span> <span id="valDates" class="ml-2 font-mono bg-[var(--background)] px-2 py-1 rounded"></span></div>
+                        <div><span class="font-bold text-[var(--muted-foreground)]">Amounts:</span> <span id="valAmounts" class="ml-2 font-mono bg-[var(--background)] px-2 py-1 rounded"></span></div>
+                        <div><span class="font-bold text-[var(--muted-foreground)]">Names:</span> <span id="valNames" class="ml-2 font-mono bg-[var(--background)] px-2 py-1 rounded"></span></div>
+                        <div><span class="font-bold text-[var(--muted-foreground)]">Organizations:</span> <span id="valOrgs" class="ml-2 font-mono bg-[var(--background)] px-2 py-1 rounded"></span></div>
+                    </div>
+
+                    <h3 class="text-lg font-semibold mt-6 mb-4 border-b border-[var(--border)] pb-2">Forensic ML Features (24-Vectors)</h3>
+                    <div id="forensicContainer" class="bg-[var(--background)] border border-[var(--border)] rounded-md p-3 max-h-48 overflow-y-auto font-mono text-xs">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Audit Log & Heatmap -->
+            <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 shadow-sm flex flex-col">
+                
+                <h3 class="text-lg font-semibold mb-4 border-b border-[var(--border)] pb-2">Engine Audit Log</h3>
+                <ul id="auditLog" class="list-disc list-inside space-y-2 text-sm mb-6 text-[var(--muted-foreground)] overflow-y-auto max-h-48">
+                    <!-- Injected by JS -->
+                </ul>
+
+                <div id="heatmapSection" class="hidden flex-grow flex flex-col">
+                    <h3 class="text-lg font-semibold mb-2 border-b border-[var(--border)] pb-2">Error Level Analysis (ELA) Heatmap</h3>
+                    <p class="text-xs text-[var(--muted-foreground)] mb-3">Red/Yellow areas indicate high pixel-variance, strongly suggesting Photoshop manipulation or splicing.</p>
+                    <div class="flex-grow bg-[var(--background)] border border-[var(--border)] rounded-md flex items-center justify-center overflow-hidden p-2">
+                        <img id="heatmapImage" class="max-h-full max-w-full object-contain rounded" src="" alt="ELA Heatmap">
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        
+        verifyBtn.addEventListener('click', async () => {
+            if (fileInput.files.length === 0) {
+                alert("Please select a file first.");
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            // UI State
+            results.classList.add('hidden');
+            loading.classList.remove('hidden');
+            verifyBtn.disabled = true;
+            verifyBtn.classList.add('opacity-50');
+            
+            try {
+                const response = await fetch("http://localhost:8000/api/verify", {
+                    method: "POST",
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Verdict Styling
+                const verdictBox = document.getElementById('verdictBox');
+                const verdictText = document.getElementById('verdictText');
+                verdictText.textContent = data.verdict;
+                document.getElementById('scoreText').textContent = data.score + " / 100";
+                
+                verdictBox.className = "rounded-xl p-6 border shadow-sm text-white ";
+                if (data.verdict.includes("HIGH")) {
+                    verdictBox.classList.add("bg-red-600", "border-red-800");
+                } else if (data.verdict.includes("MEDIUM")) {
+                    verdictBox.classList.add("bg-yellow-600", "border-yellow-800");
+                } else {
+                    verdictBox.classList.add("bg-green-600", "border-green-800");
+                }
+                
+                // Extraction
+                const ext = data.extracted_data || {};
+                document.getElementById('valDates').textContent = (ext.dates || []).join(", ") || "None";
+                document.getElementById('valAmounts').textContent = (ext.amounts || []).join(", ") || "None";
+                document.getElementById('valNames').textContent = (ext.names || []).join(", ") || "None";
+                document.getElementById('valOrgs').textContent = (ext.organizations || []).join(", ") || "None";
+                
+                // Forensics
+                const fContainer = document.getElementById('forensicContainer');
+                fContainer.innerHTML = '';
+                if (ext.forensic_features) {
+                    for (const [key, val] of Object.entries(ext.forensic_features)) {
+                        const div = document.createElement('div');
+                        div.className = "flex justify-between border-b border-[var(--border)] py-1 last:border-0";
+                        div.innerHTML = `<span>${key}</span><span class="font-bold">${typeof val === 'number' ? val.toFixed(4) : val}</span>`;
+                        fContainer.appendChild(div);
+                    }
+                } else {
+                    fContainer.innerHTML = "<div class='text-center opacity-50 py-4'>No forensics extracted (Text document)</div>";
+                }
+                
+                // Audit Log
+                const auditLog = document.getElementById('auditLog');
+                auditLog.innerHTML = '';
+                (data.reasons || []).forEach(r => {
+                    const li = document.createElement('li');
+                    li.textContent = r;
+                    auditLog.appendChild(li);
+                });
+                
+                // Heatmap
+                const heatmapSection = document.getElementById('heatmapSection');
+                if (data.ela_heatmap) {
+                    heatmapSection.classList.remove('hidden');
+                    document.getElementById('heatmapImage').src = "data:image/jpeg;base64," + data.ela_heatmap;
+                } else {
+                    heatmapSection.classList.add('hidden');
+                }
+                
+                // Show results
+                results.classList.remove('hidden');
+                
+            } catch (err) {
+                alert("Verification Failed:\n" + err.message);
+                console.error(err);
+            } finally {
+                loading.classList.add('hidden');
+                verifyBtn.disabled = false;
+                verifyBtn.classList.remove('opacity-50');
+            }
+        });
+    </script>
+</body>
+</html>
