@@ -6,6 +6,13 @@ import io
 import csv
 import docx
 import pyotp
+import base64
+import hashlib
+
+def get_user_secret(username: str) -> str:
+    h = hashlib.sha256(username.strip().lower().encode('utf-8')).digest()
+    return base64.b32encode(h).decode('utf-8')[:32]
+
 from app.engines import ocr_engine, rules_engine, tamper_engine, duplicate_engine, text_engine, seal_engine, ai_model
 from app.database import log_scan
 
@@ -36,17 +43,20 @@ async def seal_document(
     request: Request,
     file: UploadFile = File(...),
     employee_name: str = Form("Unknown"),
+    employee_role: str = Form("Unknown"),
     department: str = Form("Unknown"),
-    mfa_token: str = Form("NO_MFA")
+    mfa_token: str = Form("NO_MFA"),
+    action: str = Form("SEALED")
 ):
-    # Real MFA Validation
-    totp = pyotp.TOTP(DEMO_MFA_SECRET)
+    # Real MFA Validation (User Specific)
+    user_secret = get_user_secret(employee_name)
+    totp = pyotp.TOTP(user_secret)
     if not totp.verify(mfa_token):
         raise HTTPException(status_code=401, detail="Invalid MFA Token. Access Denied.")
         
     raw_bytes = await file.read()
     client_ip = request.client.host if request.client else "Unknown IP"
-    sealed_bytes = seal_engine.seal_document(raw_bytes, employee_name, department, client_ip, mfa_token)
+    sealed_bytes = seal_engine.seal_document(raw_bytes, employee_name, department, client_ip, mfa_token, employee_role, action)
     return Response(content=sealed_bytes, media_type=file.content_type)
 
 @router.post("/verify")
@@ -59,16 +69,17 @@ async def verify_document(file: UploadFile = File(...)):
     extracted_data = {}
     
     # 0. Cryptographic Seal Check
-    seal_status, original_bytes, seal_msg = seal_engine.check_seal(raw_bytes)
+    seal_status, original_bytes, seal_msgs = seal_engine.check_seal(raw_bytes)
     if seal_status == "BROKEN":
         total_score += 100
-        all_reasons.append(f"🚨 CRITICAL: {seal_msg}")
+        all_reasons.append("🔴 CRITICAL: Chain of Custody is BROKEN!")
     elif seal_status == "AUTHENTIC":
-        all_reasons.append(f"✅ {seal_msg}")
-    else:
-        all_reasons.append(seal_msg)
+        all_reasons.append("🟢 Chain of Custody is AUTHENTIC!")
         
+    all_reasons.extend(seal_msgs)
+    
     # Process the original_bytes (without the seal appended)
+    metadata = {}
     
     # Text Document Bypass
     if filename_lower.endswith((".txt", ".csv", ".docx")):
@@ -130,6 +141,9 @@ async def verify_document(file: UploadFile = File(...)):
         claimed_locs = ", ".join(extracted_data["locations"])
         all_reasons.append(f"🌍 Geospatial Anomaly: The document claims to be from '{claimed_locs}', but the embedded EXIF metadata contains conflicting GPS coordinates. Possible location spoofing.")
     
+    if total_score > 100:
+        total_score = 100.0
+
     if total_score > 70:
         verdict = "HIGH RISK"
     elif total_score > 40:

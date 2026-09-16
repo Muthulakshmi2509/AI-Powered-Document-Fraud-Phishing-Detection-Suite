@@ -8,12 +8,17 @@ def analyze_exif(img):
     reasons = []
     penalty = 0.0
     
+    # Only expect EXIF on native camera formats (JPEG/TIFF). PDFs/PNGs don't use it.
+    if img.format not in ['JPEG', 'TIFF', 'MPO']:
+        return penalty, reasons, {}
+        
     try:
         exif_data = img._getexif() if hasattr(img, '_getexif') else None
         
         if not exif_data:
-            reasons.append("No EXIF metadata found (could be stripped or native digital).")
-            penalty += 10.0
+            reasons.append("No EXIF metadata found on JPEG (could be stripped or screenshot).")
+            # Don't heavily penalize missing EXIF, just note it.
+            penalty += 2.0
             return penalty, reasons, {}
             
         exif = {

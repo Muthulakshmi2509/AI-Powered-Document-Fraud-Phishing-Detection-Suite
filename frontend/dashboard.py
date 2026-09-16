@@ -5,13 +5,19 @@ import sqlite3
 import os
 import json
 import pyotp
+import base64
+import hashlib
+
+def get_user_secret(username: str) -> str:
+    h = hashlib.sha256(username.strip().lower().encode('utf-8')).digest()
+    return base64.b32encode(h).decode('utf-8')[:32]
+
 import time
 
 st.set_page_config(page_title="Document Verifier", layout="wide")
 
 # --- MOCK AUTHENTICATOR APP ---
 st.sidebar.title("📱 Setup Google Authenticator")
-st.sidebar.info("Scan this QR code with Google Authenticator or Authy on your phone to link your account!")
 
 # Generate provisioning URI for Google Authenticator
 totp = pyotp.TOTP("JBSWY3DPEHPK3PXP")
@@ -125,6 +131,27 @@ with tab3:
     col1, col2, col3 = st.columns(3)
     with col1:
         emp_name = st.text_input("Employee / Custodian Name", placeholder="e.g., John Doe")
+    emp_role = st.selectbox("Role", ["Clerk", "Manager", "Finance Director", "External Auditor"])
+    action = st.radio("Action", ["Originate Document (Initial Seal)", "Acknowledge Receipt (Transfer Custody)", "Approve Document"])
+    # mapping actions to short codes
+    
+    st.info("Because every employee has a unique MFA key, type your name above to generate your specific QR code!")
+    current_name = emp_name if emp_name else "Unknown"
+    user_secret = get_user_secret(current_name)
+    totp = pyotp.TOTP(user_secret)
+    uri = totp.provisioning_uri(name=f'{current_name}@Company.com', issuer_name='DocVerifier Security')
+      
+    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=5, border=4)
+    qr.add_data(uri)
+    qr.make(fit=True)
+    img_qr = qr.make_image(fill_color="black", back_color="white")
+    img_byte_arr = io.BytesIO()
+    img_qr.save(img_byte_arr, format='PNG')
+    st.image(img_byte_arr, caption=f"MFA QR Code for {current_name}", width=200)
+
+    action_code = "SEALED"
+    if "Receipt" in action: action_code = "RECEIVED"
+    if "Approve" in action: action_code = "APPROVED"
     with col2:
         dept_name = st.text_input("Department", placeholder="e.g., Finance")
     with col3:
@@ -141,8 +168,10 @@ with tab3:
                     files = {"file": (seal_file.name, seal_file.getvalue(), seal_file.type)}
                     data = {
                         "employee_name": emp_name if emp_name else "Unknown",
+                        "employee_role": emp_role,
                         "department": dept_name if dept_name else "Unknown",
-                        "mfa_token": mfa_token
+                        "mfa_token": mfa_token,
+                        "action": action_code
                     }
                 try:
                     response = requests.post(API_SEAL_URL, files=files, data=data)
